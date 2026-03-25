@@ -11,8 +11,10 @@ const userNicknameInput = document.getElementById("userNicknameInput");
 const saveNicknameBtn = document.getElementById("saveNicknameBtn");
 const shareBtn = document.getElementById("shareBtn");
 const refreshBoardBtn = document.getElementById("refreshBoardBtn");
+const tabScore = document.getElementById("tabScore");
+const tabCollection = document.getElementById("tabCollection");
 
-// 🎮 新增：关卡与抽卡 DOM
+// 🎮 新增：详情弹窗 DOM
 const currentLevelElement = document.getElementById("currentLevel");
 const totalScoreElement = document.getElementById("totalScore");
 const gachaModal = document.getElementById("gachaModal");
@@ -42,9 +44,46 @@ const detailInt = document.getElementById("detailInt");
 const closeDetailBtn = document.getElementById("closeDetailBtn");
 const closeGameOverBtn = document.getElementById("closeGameOverBtn");
 
+// 🎮 移动端控制按钮 DOM
+const btnUp = document.getElementById("btnUp");
+const btnDown = document.getElementById("btnDown");
+const btnLeft = document.getElementById("btnLeft");
+const btnRight = document.getElementById("btnRight");
+
+// 🎮 新增：皮卡丘宠物 DOM
+const petBubble = document.getElementById("petBubble");
+const pikachuPet = document.getElementById("pikachuPet");
+
 // 🏆 全网排行榜 API 端点 (正确的 npoint.io 专属 ID)
 const API_ENDPOINT = "https://api.npoint.io/3039805fc7a1717aa687";
-const APP_VERSION = "v2026.03.25.Gen2_Mode"; // 扩展至第二代
+const APP_VERSION = "v2026.03.25.Pet_Mode"; // 增加宠物模式版本
+
+// 💾 宠物互动台词 (毒舌版)
+const PET_QUOTES = {
+    start: ["哟，又来送人头了？", "皮卡...看你这操作我就心慌", "准备好刷新你的最低分了吗？", "去吧！菜鸟贪吃蛇！"],
+    eat: ["运气不错，这都能吃到？", "居然还没撞墙，奇迹啊", "呵，吃再多也掩盖不了技术菜", "别高兴太早，前面就是墙", "慢点吃，别噎着你的智商"],
+    levelUp: ["Wow! 瞎猫碰上死耗子了？", "这种难度也能升级？服了", "解锁新精灵也救不了你的手残", "行行行，算你厉害一次行了吧？"],
+    die: ["噗...我就知道会这样", "这操作，我奶奶上都比你强", "要不还是回家玩消消乐吧？", "菜是原罪，懂吗？Pika!", "求你了，别再折磨这条蛇了"]
+};
+
+function showPetTalk(type) {
+    const quotes = PET_QUOTES[type];
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    petBubble.textContent = randomQuote;
+    petBubble.classList.add("show");
+    
+    // 增加一点点卖萌的缩放效果
+    pikachuPet.style.transform = "scale(1.2) rotate(10deg)";
+    
+    // 3秒后消失
+    setTimeout(() => {
+        petBubble.classList.remove("show");
+        pikachuPet.style.transform = "";
+    }, 3000);
+}
+
+// 给皮卡丘增加点击互动
+pikachuPet.addEventListener("click", () => showPetTalk('start'));
 
 // 💾 游戏数据
 let totalScore = parseInt(localStorage.getItem("snakeTotalScore")) || 0;
@@ -229,6 +268,7 @@ let highScore = localStorage.getItem("snakeHighScore") || 0;
 let gameLoopTimeout;
 let gameActive = false;
 let changingDirection = false;
+let currentTab = 'score'; // 当前选中的排行榜标签
 
 let leaderboard = [];
 
@@ -272,6 +312,20 @@ async function fetchLeaderboard() {
 setInterval(fetchLeaderboard, 60000);
 refreshBoardBtn.addEventListener("click", fetchLeaderboard);
 
+tabScore.addEventListener("click", () => {
+    currentTab = 'score';
+    tabScore.classList.add('active');
+    tabCollection.classList.remove('active');
+    updateLeaderboardUI();
+});
+
+tabCollection.addEventListener("click", () => {
+    currentTab = 'collection';
+    tabCollection.classList.add('active');
+    tabScore.classList.remove('active');
+    updateLeaderboardUI();
+});
+
 // highScoreElement.textContent = highScore;
 currentLevelElement.textContent = currentLevel;
 totalScoreElement.textContent = totalScore;
@@ -285,6 +339,7 @@ async function initGame() {
     scoreElement.textContent = score;
     gameActive = true;
     gameOverModal.classList.add("hidden");
+    showPetTalk('start'); // 游戏开始皮卡丘说话
     placeFood();
     clearTimeout(gameLoopTimeout);
     gameLoop();
@@ -336,6 +391,8 @@ function moveSnake() {
         totalScoreElement.textContent = totalScore;
         localStorage.setItem("snakeTotalScore", totalScore);
 
+        if (score % 30 === 0) showPetTalk('eat'); // 偶尔吃果子说话
+        
         // 检查是否达到关卡目标
         if (score >= getLevelTarget(currentLevel)) {
             levelUp();
@@ -357,6 +414,7 @@ function levelUp() {
     // 获得一次抽卡机会
     pendingDraws++;
     localStorage.setItem("snakePendingDraws", pendingDraws);
+    showPetTalk('levelUp'); // 升级说话
     
     // 暂停游戏，弹出抽卡界面
     gameActive = false;
@@ -375,7 +433,7 @@ function showGachaModal() {
 drawBtn.addEventListener("click", () => {
     if (pendingDraws <= 0) return;
     
-    // 随机抽取一只 (1-100)
+    // 随机抽取一只 (1-251)
     const randomIndex = Math.floor(Math.random() * POKEMON_DATA.length);
     const pokemon = POKEMON_DATA[randomIndex];
     
@@ -488,37 +546,43 @@ async function endGame() {
     gameActive = false;
     finalScoreElement.textContent = score;
     gameOverModal.classList.remove("hidden");
+    showPetTalk('die'); // 死亡说话
     userInfoDisplay.innerHTML = `玩家: <span id="feishuName">${FEISHU_USER_NAME}</span> (正在本地保存...)`;
     
-    if (score > 0) {
-        updateLocalLeaderboard(FEISHU_USER_NAME, score);
-        updateLeaderboardUI();
-        
-        try {
-            userInfoDisplay.innerHTML = `玩家: <span id="feishuName">${FEISHU_USER_NAME}</span> (正在全网同步...)`;
-            await syncToCloud();
-            userInfoDisplay.innerHTML = `玩家: <span id="feishuName">${FEISHU_USER_NAME}</span> (全网同步成功 ✅)`;
-        } catch (e) {
-            console.error("同步失败:", e);
-            userInfoDisplay.innerHTML = `玩家: <span id="feishuName">${FEISHU_USER_NAME}</span> (全网同步失败，已暂存本地)`;
-        }
-    } else {
-        userInfoDisplay.innerHTML = `玩家: <span id="feishuName">${FEISHU_USER_NAME}</span> (再接再厉哦)`;
+    // 无论分数是否为 0，都尝试同步一次（因为可能有新的收集）
+    updateLocalLeaderboard(FEISHU_USER_NAME, score, myCollection.length);
+    updateLeaderboardUI();
+    
+    try {
+        userInfoDisplay.innerHTML = `玩家: <span id="feishuName">${FEISHU_USER_NAME}</span> (正在全网同步...)`;
+        await syncToCloud();
+        userInfoDisplay.innerHTML = `玩家: <span id="feishuName">${FEISHU_USER_NAME}</span> (全网同步成功 ✅)`;
+    } catch (e) {
+        console.error("同步失败:", e);
+        userInfoDisplay.innerHTML = `玩家: <span id="feishuName">${FEISHU_USER_NAME}</span> (全网同步失败，已暂存本地)`;
     }
 }
 
-function updateLocalLeaderboard(name, score) {
+function updateLocalLeaderboard(name, score, collCount) {
     const idx = leaderboard.findIndex(i => i.name === name);
     if (idx !== -1) {
-        if (score > leaderboard[idx].score) {
+        // 更新最高分和最高收集数
+        if (score > (leaderboard[idx].score || 0)) {
             leaderboard[idx].score = score;
-            leaderboard[idx].date = new Date().toLocaleDateString();
         }
+        if (collCount > (leaderboard[idx].coll || 0)) {
+            leaderboard[idx].coll = collCount;
+        }
+        leaderboard[idx].date = new Date().toLocaleDateString();
     } else {
-        leaderboard.push({ name, score, date: new Date().toLocaleDateString() });
+        leaderboard.push({ 
+            name, 
+            score: score, 
+            coll: collCount, 
+            date: new Date().toLocaleDateString() 
+        });
     }
-    leaderboard.sort((a, b) => b.score - a.score);
-    leaderboard = leaderboard.slice(0, 10);
+    // 排序逻辑在 UI 渲染时处理，保持原始数据完整
     localStorage.setItem("snakeLeaderboardBackup", JSON.stringify(leaderboard));
 }
 
@@ -545,12 +609,12 @@ function mergeData(cloudData) {
         const localIdx = leaderboard.findIndex(i => i.name === cloudItem.name);
         if (localIdx === -1) {
             leaderboard.push(cloudItem);
-        } else if (cloudItem.score > leaderboard[localIdx].score) {
-            leaderboard[localIdx].score = cloudItem.score;
+        } else {
+            // 合并逻辑：保留最高分和最高收集
+            leaderboard[localIdx].score = Math.max(leaderboard[localIdx].score || 0, cloudItem.score || 0);
+            leaderboard[localIdx].coll = Math.max(leaderboard[localIdx].coll || 0, cloudItem.coll || 0);
         }
     });
-    leaderboard.sort((a, b) => b.score - a.score);
-    leaderboard = leaderboard.slice(0, 10);
 }
 
 function updateLeaderboardUI() {
@@ -558,17 +622,33 @@ function updateLeaderboardUI() {
         leaderboardList.innerHTML = '<div class="empty-msg">暂无记录，快来抢占沙发！</div>';
         return;
     }
+
+    // 根据当前选中的标签进行排序
+    let displayList = [...leaderboard];
+    if (currentTab === 'score') {
+        displayList.sort((a, b) => (b.score || 0) - (a.score || 0));
+    } else {
+        displayList.sort((a, b) => (b.coll || 0) - (a.coll || 0));
+    }
+
+    // 仅显示前 10 名
+    displayList = displayList.slice(0, 10);
+
     leaderboardList.innerHTML = "";
-    leaderboard.forEach((item, index) => {
+    displayList.forEach((item, index) => {
         const div = document.createElement("div");
         div.className = "leaderboard-item";
         const initial = item.name.charAt(0).toUpperCase();
         const color = getAvatarColor(item.name);
+        
+        // 根据类型显示数值
+        const val = currentTab === 'score' ? (item.score || 0) : `${item.coll || 0} 只`;
+        
         div.innerHTML = `
             <span class="rank">${index + 1}</span>
             <div class="avatar" style="background: ${color}">${initial}</div>
             <span class="name">${item.name}</span>
-            <span class="score">${item.score}</span>
+            <span class="score">${val}</span>
         `;
         leaderboardList.appendChild(div);
     });
@@ -589,6 +669,25 @@ function changeDirection(event) {
 }
 
 document.addEventListener("keydown", changeDirection);
+
+// 移动端控制
+btnUp.addEventListener("click", () => handleMobileClick('UP'));
+btnDown.addEventListener("click", () => handleMobileClick('DOWN'));
+btnLeft.addEventListener("click", () => handleMobileClick('LEFT'));
+btnRight.addEventListener("click", () => handleMobileClick('RIGHT'));
+
+function handleMobileClick(dir) {
+    if (!gameActive && nicknameModal.classList.contains("hidden")) {
+        initGame();
+        return;
+    }
+    const KEYS = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40 };
+    changeDirection({ keyCode: KEYS[dir], preventDefault: () => {} });
+}
+
+// 阻止移动端浏览器默认滚动（在 Canvas 区域）
+canvas.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+canvas.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
 restartBtn.addEventListener("click", initGame);
 shareBtn.addEventListener("click", () => {
     navigator.clipboard.writeText(window.location.href).then(() => {

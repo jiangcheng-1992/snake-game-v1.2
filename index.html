@@ -2,12 +2,21 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>超级贪吃蛇 - 极简版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>超级贪吃蛇 - 宝可梦收集版</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="main-layout">
+        <!-- 互动宠物 -->
+        <div class="pet-sidebar">
+            <div id="pikachuPet" class="pikachu-container">
+                <div id="petBubble" class="pet-bubble hidden">Pika!</div>
+                <img src="https://play.pokemonshowdown.com/sprites/ani/pikachu.gif" alt="Pikachu" class="pikachu-img">
+                <div class="pet-shadow"></div>
+            </div>
+        </div>
+
         <!-- 游戏区域 -->
         <div class="game-wrapper">
             <div class="game-header">
@@ -133,8 +142,20 @@
             </div>
 
             <div class="controls-hint">
-                <p>使用 <b>方向键</b> 或 <b>WASD</b> 控制移动</p>
+                <p class="pc-hint">使用 <b>方向键</b> 或 <b>WASD</b> 控制移动</p>
                 <button id="openCollectionBtn" class="collection-entry-btn">🐾 查看已收集卡片</button>
+            </div>
+
+            <!-- 移动端虚拟按键 -->
+            <div class="mobile-controls">
+                <div class="control-row">
+                    <button id="btnUp" class="control-btn">▲</button>
+                </div>
+                <div class="control-row">
+                    <button id="btnLeft" class="control-btn">◀</button>
+                    <button id="btnDown" class="control-btn">▼</button>
+                    <button id="btnRight" class="control-btn">▶</button>
+                </div>
             </div>
         </div>
 
@@ -142,6 +163,10 @@
         <div class="leaderboard-sidebar">
             <div class="sidebar-header">
                 <h2>🏆 全球排行榜</h2>
+                <div class="leaderboard-tabs">
+                    <button class="tab-btn active" id="tabScore">积分榜</button>
+                    <button class="tab-btn" id="tabCollection">收集榜</button>
+                </div>
                 <div class="sidebar-sub">
                     <span>全网实时同步</span>
                     <button id="refreshBoardBtn" title="刷新榜单">🔄</button>
